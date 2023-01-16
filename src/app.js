@@ -76,22 +76,25 @@ app.get('/participants', async (req, res) => {
 
 app.post('/messages', async (req, res) => {
     const { to, text, type } = req.body
-    const { from } = req.headers
-
+    const user = req.headers.user.toString()
+    console.log(user);
     try {
         const senderExists = await db
             .collection('participants')
-            .find({ name: from })
+            .find({ name: user })
             .toArray()
         
-        if (senderExists[0]) {
+        if (senderExists[0] || !user)
             return res.status(422).send()
-        }
-        console.log(from, to, text, type, senderExists)
+    
+        if (!(type === 'message' || type === 'private_messa')) 
+            return res.status(422).send()
+
+        console.log(user, to, text, type, senderExists)
         const messageSchema = joi.object({
             to: joi.string().required(),
             text: joi.string().required(),
-            type: joi.string().allow('message', 'private_message').required()
+            type: joi.string().required()
         })
 
         const validation = messageSchema
@@ -108,7 +111,7 @@ app.post('/messages', async (req, res) => {
                 .send(errors)
         }
 
-        await db.collection('messages').insertOne({ from: from, to: to, text: text, type: type, time: timeNow })
+        await db.collection('messages').insertOne({ from: user, to: to, text: text, type: type })
         res.status(201).send()
     } catch (err) {
         return res.status(500).send()

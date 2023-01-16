@@ -149,7 +149,7 @@ app.get('/messages', async (req, res) => {
 
 app.post('/status', async (req, res) => {
     try {
-        const { user } = req.header
+        const { user } = req.headers
         const userExists = db.collection('participants').findOne({ name: user }).toArray()
         if (!userExists) res.status(404)
 

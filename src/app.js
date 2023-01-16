@@ -83,10 +83,11 @@ app.post('/messages', async (req, res) => {
             .collection('participants')
             .find({ name: from })
             .toArray()
-        console.log(from, senderExists)
-        if (!senderExists[0]) {
+        
+        if (senderExists[0]) {
             return res.status(422).send()
         }
+        console.log(from, to, text, type, senderExists)
         const messageSchema = joi.object({
             to: joi.string().required(),
             text: joi.string().required(),
@@ -117,16 +118,19 @@ app.post('/messages', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     try {
-        const limit = req.query.limit
-        const { User } = req.header
-        const messages = await db.collection('messages').find({ to: User, to: "Todos", from: User }).toArray()
+        const limit = parseInt(req.query.limit)
+        const { user } = req.headers
+        const messagesToUser = await db.collection('messages').find({ to: user  }).toArray()
+        const messagesToAll = await db.collection('messages').find({ to: 'Todos'}).toArray()
+        const messagesFromAll = await db.collection('messages').find({ from: user}).toArray()
+        const messages = messagesToUser.concat(messagesToAll, messagesFromAll)
         const latestMessages = messages.reverse()
         let limitMessages = []
         if (!limit) {
             limitMessages = latestMessages.slice(0 - 100);
             return res.status(200).send(limitMessages)
         }
-        if (latestMessages.length < limit) {
+        if (latestMessages.length < limit || limit > latestMessages) {
             limitMessages = latestMessages
         }
         else {

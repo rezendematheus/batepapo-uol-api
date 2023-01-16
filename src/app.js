@@ -6,11 +6,13 @@ import joi from 'joi'
 import dayjs from 'dayjs'
 dotenv.config()
 
+
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
-let db;
-mongoClient.connect(() => {
-    db = mongoClient.db("my-increadible-uolchat-database")
-})
+let db; 
+mongoClient.connect(async () => {
+db = await mongoClient.db("my-increadible-uolchat-database")
+    })
+
 
 
 
@@ -26,11 +28,12 @@ app.post('/participants', async (req, res) => {
     try{
         const { name } = req.body;
         
-        const nameExists = await db.collection('participants').findOne({name: name})
+        const nameExists = await db.collection('participants').find({name: name}).toArray()
+        
         if(nameExists){
             return res.status(409)
         }
-
+        console.log(nameExists)
         const participantsSchema = joi.object({
             name: joi.string().required()
         })
@@ -42,14 +45,14 @@ app.post('/participants', async (req, res) => {
             res
                 .status(422)
                 .send(errors)
-            mongoClient.close()
+            
         }
         
         await db.collection('participants').insertOne({name: name, lastStatus: Date.now()})
 
         await db.collection('messages').insertOne({from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: timeNow})
 
-        res.status(201)
+        return res.status(201)
     } catch(err){
         return res.status(500)
     }
@@ -61,7 +64,7 @@ app.get('/participants', async (req, res) => {
 
         res.send(participants)
     } catch(err){
-        return res.sendStatus(500).send(err.message)
+        return res.status(500).send(err.message)
     }
 })
 
@@ -105,7 +108,23 @@ app.post('/messages', async (req, res) => {
 })
 
 app.get('/messages', async (req, res) => {
+    try{
+        const limit = Number(req.query.limit)
+        const { User } = req.header
+        const latestMessages = await db.collection('messages').findMany({to: User, to: "Todos", from: User}).toArray().reverse()
+        
+        let limitMessages = []
+        if(limit){
+            limitMessages = latestMessages.slice(limit+1)
+        }
+        else{
+            limitMessages = latestMessages.slice(101)
+        }
 
+        res.send(latestMessages)
+    } catch(err){
+        res.status(500).send(err.message)
+    }
 })
 
 /* Status Routes */

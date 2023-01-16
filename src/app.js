@@ -10,7 +10,7 @@ dotenv.config()
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 let db;
 mongoClient.connect(() => {
-    db = mongoClient.db('my-increadible-uolchat-database')
+    db = mongoClient.db()
 });
 
 
@@ -77,26 +77,26 @@ app.get('/participants', async (req, res) => {
 app.post('/messages', async (req, res) => {
     const { to, text, type } = req.body
     const user = req.headers.user.toString()
-    console.log(user);
+    ;
     try {
         const senderExists = await db
             .collection('participants')
             .find({ name: user })
             .toArray()
-        
-        if (senderExists[0] || !user)
+
+        if (!senderExists[0])
             return res.status(422).send()
-    
+            
         if (!(type === 'message' || type === 'private_messa')) 
             return res.status(422).send()
-
+            
         console.log(user, to, text, type, senderExists)
         const messageSchema = joi.object({
             to: joi.string().required(),
             text: joi.string().required(),
             type: joi.string().required()
         })
-
+        
         const validation = messageSchema
             .validate({
                 to: to,
@@ -189,7 +189,7 @@ const inactivityRemover = async () => {
     }
 }
 
-setInterval(inactivityRemover, 15000)
-app.listen(5002, () => {
+//setInterval(inactivityRemover, 15000)
+app.listen(5000, () => {
     console.log("server rolling")
 })

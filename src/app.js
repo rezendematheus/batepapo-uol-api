@@ -10,7 +10,7 @@ dotenv.config()
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 let db;
 mongoClient.connect(() => {
-    db = mongoClient.db()
+    db = mongoClient.db('my-increadible-uolchat-database')
 });
 
 
@@ -149,13 +149,13 @@ app.get('/messages', async (req, res) => {
 
 app.post('/status', async (req, res) => {
     try {
-        const { User } = req.header
-        const userExists = db.collection('participants').findOne({ name: User }).toArray()
+        const { user } = req.header
+        const userExists = db.collection('participants').findOne({ name: user }).toArray()
         if (!userExists) res.status(404)
 
         const { modifiedCount } = await db
             .collection('participants')
-            .updateOne({ name: User }, { $set: { lastStatus: Date.now() } })
+            .updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
 
         if (modifiedCount === 0)
             return res.status(404)
@@ -179,6 +179,9 @@ const inactivityRemover = async () => {
                     db
                         .collection('participants')
                         .deleteOne({ name: element.name })
+                    db
+                        .collection('messages')
+                        .insertOne({from: element.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: timeNow})
                 }
             });
     } catch (err) {
@@ -187,6 +190,6 @@ const inactivityRemover = async () => {
 }
 
 setInterval(inactivityRemover, 15000)
-app.listen(5000, () => {
+app.listen(5002, () => {
     console.log("server rolling")
 })

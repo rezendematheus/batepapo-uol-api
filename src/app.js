@@ -183,7 +183,7 @@ const inactivityRemover = async () => {
     }
 }
 
-//setInterval(inactivityRemover, 15000)
+setInterval(inactivityRemover, 15000)
 app.listen(5000, () => {
     console.log("server rolling")
 })

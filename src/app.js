@@ -121,8 +121,11 @@ app.post('/messages', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit)
-
+        let limit = req.query.limit
+        if ((limit <= 0 || typeof limit === 'string') && limit.length > 0) {
+            return res.status(422).send()
+        }
+        limit = parseInt(limit)
         const { user } = req.headers
 
         const messagesToUser = await db.collection('messages').find({ to: user  }).toArray()
@@ -133,9 +136,8 @@ app.get('/messages', async (req, res) => {
         const messages = messagesToUser.concat(messagesToAll, messagesFromUserToSomeone)
         const latestMessages = messages.reverse()
         let limitMessages = []
-        if (limit < 0 || typeof limit === 'string' || isNaN(limit)) {
-            return res.status(422).send()
-        }
+        
+        
         if (!limit) {
             limitMessages = latestMessages;
             return res.status(200).send(limitMessages)

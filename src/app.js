@@ -10,7 +10,7 @@ dotenv.config()
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 let db;
 mongoClient.connect(() => {
-    db = mongoClient.db('my-increadible-uolchat-database')
+    db = mongoClient.db()
 });
 
 
@@ -196,7 +196,7 @@ const inactivityRemover = async () => {
     }
 }
 
-//setInterval(inactivityRemover, 15000)
+setInterval(inactivityRemover, 15000)
 app.listen(5000, () => {
     console.log("server rolling")
 })

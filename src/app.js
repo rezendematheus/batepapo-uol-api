@@ -84,7 +84,10 @@ app.post('/messages', async (req, res) => {
             .find({ name: user })
             .toArray()
 
-        if (!senderExists[0] || !user)
+        if (!senderExists[0])
+            return res.status(422).send()
+
+        if (!user)
             return res.status(422).send()
             
         if (!(type === 'message' || type === 'private_messa')) 
@@ -121,8 +124,8 @@ app.post('/messages', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     try {
-        let limit = req.query.limit
-        if ((limit <= 0 || typeof limit === 'string') && limit.length > 0) {
+        let limit = req.query.limit;
+        if (isNaN(parseInt(limit)) && limit.length > 0 || parseInt(limit) <= 0) {
             return res.status(422).send()
         }
         limit = parseInt(limit)

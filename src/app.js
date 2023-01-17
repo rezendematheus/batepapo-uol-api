@@ -10,7 +10,7 @@ dotenv.config()
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 let db;
 mongoClient.connect(() => {
-    db = mongoClient.db()
+    db = mongoClient.db('my-increadible-uolchat-database')
 });
 
 
@@ -26,10 +26,10 @@ const timeNow = dayjs().format('HH:mm:ss');
 
 app.post('/participants', async (req, res) => {
     try {
-        const { name } = req.body;
+        const name = req.body.name;
 
         const nameExists = await db.collection('participants').find({ name: name }).toArray()
-        //res.send(nameExists)
+        
         if (nameExists[0]) {
             return res.status(409).send()
         }
@@ -84,7 +84,7 @@ app.post('/messages', async (req, res) => {
             .find({ name: user })
             .toArray()
 
-        if (!senderExists[0])
+        if (!senderExists[0] || !user)
             return res.status(422).send()
             
         if (!(type === 'message' || type === 'private_messa')) 
@@ -111,7 +111,7 @@ app.post('/messages', async (req, res) => {
                 .send(errors)
         }
 
-        await db.collection('messages').insertOne({ from: user, to: to, text: text, type: type })
+        await db.collection('messages').insertOne({ from: user, to: to, text: text, type: type, time: timeNow })
         res.status(201).send()
     } catch (err) {
         return res.status(500).send()
@@ -122,15 +122,22 @@ app.post('/messages', async (req, res) => {
 app.get('/messages', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit)
+
         const { user } = req.headers
+
         const messagesToUser = await db.collection('messages').find({ to: user  }).toArray()
         const messagesToAll = await db.collection('messages').find({ to: 'Todos'}).toArray()
-        const messagesFromAll = await db.collection('messages').find({ from: user}).toArray()
-        const messages = messagesToUser.concat(messagesToAll, messagesFromAll)
+        const messagesFromUser = await db.collection('messages').find({ from: user}).toArray()
+        const messagesFromUserToSomeone = messagesFromUser.filter(item => item.to != 'Todos')
+
+        const messages = messagesToUser.concat(messagesToAll, messagesFromUserToSomeone)
         const latestMessages = messages.reverse()
         let limitMessages = []
+        if (limit < 0 || typeof limit === 'string' || isNaN(limit)) {
+            return res.status(422).send()
+        }
         if (!limit) {
-            limitMessages = latestMessages.slice(0 - 100);
+            limitMessages = latestMessages;
             return res.status(200).send(limitMessages)
         }
         if (latestMessages.length < limit || limit > latestMessages) {
@@ -150,7 +157,7 @@ app.get('/messages', async (req, res) => {
 app.post('/status', async (req, res) => {
     try {
         const { user } = req.headers
-        const userExists = db.collection('participants').findOne({ name: user }).toArray()
+        const userExists = db.collection('participants').findOne({ name: user })
         if (!userExists) res.status(404)
 
         const { modifiedCount } = await db
@@ -158,8 +165,8 @@ app.post('/status', async (req, res) => {
             .updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
 
         if (modifiedCount === 0)
-            return res.status(404)
-        res.status(200)
+            return res.status(404).send()
+        res.status(200).send()
     } catch (err) {
         res.status(500).send(err.message)
     }
@@ -189,7 +196,7 @@ const inactivityRemover = async () => {
     }
 }
 
-setInterval(inactivityRemover, 15000)
+//setInterval(inactivityRemover, 15000)
 app.listen(5000, () => {
     console.log("server rolling")
 })
